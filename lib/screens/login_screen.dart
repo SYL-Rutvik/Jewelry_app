@@ -46,7 +46,7 @@ class LoginScreen extends StatelessWidget {
   Widget _buildSignInButton(BuildContext context, Size screenSize) {
     return ElevatedButton(
       onPressed: () {
-        // ✅ Redirect to HomeScreen after login
+        // ✅ Redirect to Home Screen after login
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
