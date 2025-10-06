@@ -199,6 +199,7 @@ class LoginScreen extends StatelessWidget {
                               color: Color(0xFFF77F38),
                               fontWeight: FontWeight.bold,
                             ),
+                            //redirect to SignUpScreen
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
                                 Navigator.of(context).push(
