@@ -5,7 +5,7 @@ import 'cart_page.dart';
 import 'MyWishlist_screen.dart'; // ✅ IMPORT THE NEW WISHLIST SCREEN
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+0  const HomeScreen({Key? key}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,8 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: Colors.white,
-      drawer: _buildDrawer(),
+      backgroundColor: Colors.white,      drawer: _buildDrawer(),
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
