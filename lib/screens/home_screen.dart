@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'product_info.dart';
 import 'login_screen.dart';
 import 'cart_page.dart';
-import 'MyWishlist_screen.dart'; // ✅ IMPORT THE NEW WISHLIST SCREEN
+import 'MyWishlist_screen.dart';
 
 class HomeScreen extends StatefulWidget {
 0  const HomeScreen({Key? key}) : super(key: key);
