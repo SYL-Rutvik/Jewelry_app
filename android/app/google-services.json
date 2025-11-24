@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "923749045762",
+    "project_id": "jewelry-app-8afec",
+    "storage_bucket": "jewelry-app-8afec.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:923749045762:android:95d9a4e3e9f4fa5646391b",
+        "android_client_info": {
+          "package_name": "com.example.jewelery_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxYWK1fMfySt5srIrtnNtnMmXadbvPajM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

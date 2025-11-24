@@ -1,37 +1,32 @@
 import 'package:flutter/material.dart';
-import 'screens/sign_up_screen.dart';
 
-void main() {
-  runApp(const MyApp());
+// 1. IMPORT THE FIREBASE CORE PACKAGE
+import 'package:firebase_core/firebase_core.dart';
+import 'package:jewelery_app/features/auth/sign_up_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:jewelery_app/features/auth/login_screen.dart';
+
+// 2. IMPORT THE CONFIGURATION FILE YOU JUST GENERATED
+import 'firebase_options.dart';
+
+void main() async {
+  // 3. ENSURE FLUTTER IS INITIALIZED
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 4. INITIALIZE FIREBASE
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // 5. RUN YOUR APP
+  runApp(const MyApp()); // Or whatever your main app widget is
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const SignUpScreen(),
+      home: LoginScreen(), // <-- Set LoginScreen directly as home
     );
   }
 }
