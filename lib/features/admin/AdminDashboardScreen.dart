@@ -4,6 +4,7 @@ import 'admin_users_screen.dart';
 import 'admin_orders_screen.dart';
 import 'admin_products_screen.dart';
 import 'admin_categories_screen.dart';
+import '../auth/login_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
@@ -13,37 +14,21 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  // --- Static data for now ---
-  final int _totalOrders = 453;
-  final double _revenue = 35786.00;
-
-  final List<Map<String, dynamic>> _recentOrders = [
-    {
-      'orderId': '#12345',
-      'customer': 'Rutvik',
-      'total': '₹500',
-      'status': 'Pending',
-      'date': '05-11-2024',
-    },
-    {
-      'orderId': '#12346',
-      'customer': 'Rutvik',
-      'total': '₹500',
-      'status': 'Pending',
-      'date': '05-11-2024',
-    },
-  ];
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         backgroundColor: const Color(0xFFF77F38),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: () {},
+          onPressed: () {
+            _scaffoldKey.currentState?.openDrawer();
+          },
         ),
         title: const Text(
           'Dashboard',
@@ -51,6 +36,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
         centerTitle: false,
       ),
+      drawer: _buildAdminDrawer(),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -66,11 +52,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // --- ROW 1: ORDERS & REVENUE ---
               Row(
                 children: [
-                  _buildDashboardCard(
+                  // ✅ 1. DYNAMIC ORDERS CARD
+                  _buildDynamicCountCard(
                     title: 'Total Orders',
-                    value: _totalOrders.toString(),
+                    collection: 'orders',
                     color: Colors.blue.shade600,
                     onTap: () => Navigator.push(
                       context,
@@ -80,18 +69,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  _buildDashboardCard(
+
+                  // ✅ 2. DYNAMIC REVENUE CARD (Custom Logic)
+                  _buildDynamicRevenueCard(
                     title: 'Revenue',
-                    value: '₹${_revenue.toStringAsFixed(0)}',
                     color: Colors.orange.shade600,
-                    onTap: () {},
                   ),
                 ],
               ),
+
               const SizedBox(height: 16),
+
+              // --- ROW 2: PRODUCTS & CATEGORIES ---
               Row(
                 children: [
-                  _buildDynamicDashboardCard(
+                  _buildDynamicCountCard(
                     title: 'PRODUCTS',
                     collection: 'products',
                     color: Colors.green.shade600,
@@ -103,7 +95,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  _buildDynamicDashboardCard(
+                  _buildDynamicCountCard(
                     title: 'CATEGORIES',
                     collection: 'categories',
                     color: Colors.cyan.shade600,
@@ -116,11 +108,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ],
               ),
+
               const SizedBox(height: 16),
+
+              // --- ROW 3: USERS ---
               Row(
                 children: [
-                  // ✅ MODIFIED: The "USERS" card is now dynamic
-                  _buildDynamicDashboardCard(
+                  _buildDynamicCountCard(
                     title: 'USERS',
                     collection: 'users',
                     color: Colors.purple.shade600,
@@ -132,9 +126,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  Expanded(child: Container()), // Empty space
+                  Expanded(
+                    child: Container(),
+                  ), // Empty spacer to keep alignment
                 ],
               ),
+
               const SizedBox(height: 30),
               const Text(
                 'Recent Orders',
@@ -145,6 +142,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
               const SizedBox(height: 15),
+
+              // ✅ 3. DYNAMIC RECENT ORDERS TABLE
               _buildRecentOrdersTable(),
             ],
           ),
@@ -153,8 +152,64 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // --- This widget builds your dynamic cards ---
-  Widget _buildDynamicDashboardCard({
+  // --- DRAWER ---
+  Widget _buildAdminDrawer() {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          DrawerHeader(
+            decoration: const BoxDecoration(color: Color(0xFFF77F38)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    Icons.admin_panel_settings,
+                    size: 30,
+                    color: Color(0xFFF77F38),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Admin User',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'admin@gmail.com',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Logout'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                (Route<dynamic> route) => false,
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- WIDGET: Dynamic Count Card (Generic) ---
+  Widget _buildDynamicCountCard({
     required String title,
     required String collection,
     required Color color,
@@ -187,12 +242,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       .snapshots(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
-                      return const Center(
-                        child: SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
+                      return const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       );
                     }
                     final int count = snapshot.data!.docs.length;
@@ -214,50 +267,72 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // --- This widget builds your static cards ---
-  Widget _buildDashboardCard({
+  // --- WIDGET: Dynamic Revenue Card (Specific Logic) ---
+  Widget _buildDynamicRevenueCard({
     required String title,
-    required String value,
     required Color color,
-    required VoidCallback onTap,
   }) {
     return Expanded(
       child: Card(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
+        child: Container(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 8),
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('orders')
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    );
+                  }
+
+                  // Calculate total revenue
+                  double totalRevenue = 0;
+                  for (var doc in snapshot.data!.docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    // Check for 'totalAmount' or 'total' field (adjust based on your schema)
+                    final amount = (data['totalAmount'] ?? data['total'] ?? 0);
+                    // Safely convert to double
+                    totalRevenue += (amount is int)
+                        ? amount.toDouble()
+                        : (amount as double);
+                  }
+
+                  return Text(
+                    '₹${totalRevenue.toStringAsFixed(0)}',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
+  // --- WIDGET: Recent Orders Table (Dynamic) ---
   Widget _buildRecentOrdersTable() {
     return Card(
       elevation: 2,
@@ -266,6 +341,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
+            // Table Header
             Row(
               children: const [
                 Expanded(
@@ -292,34 +368,78 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-                Expanded(
-                  child: Text(
-                    'Date',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
               ],
             ),
             const Divider(height: 20),
-            ..._recentOrders.map((order) => _buildOrderRow(order)).toList(),
+
+            // Dynamic Rows
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('orders')
+                  .orderBy('timestamp', descending: true)
+                  .limit(5) // Only show the 5 most recent orders
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData)
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(10),
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                if (snapshot.data!.docs.isEmpty)
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(10),
+                      child: Text("No recent orders"),
+                    ),
+                  );
+
+                return Column(
+                  children: snapshot.data!.docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return _buildOrderRow(data, doc.id);
+                  }).toList(),
+                );
+              },
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildOrderRow(Map<String, dynamic> order) {
+  Widget _buildOrderRow(Map<String, dynamic> order, String docId) {
+    final String orderId = order['trackingNumber'] ?? docId.substring(0, 6);
+    final String customer = order['deliveryAddress']?['fullName'] ?? 'Unknown';
+    final String total = '₹${(order['totalAmount'] ?? 0).toString()}';
+    final String status = order['orderStatus'] ?? 'Pending';
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
-          Expanded(child: Text(order['orderId']!)),
-          Expanded(child: Text(order['customer']!)),
-          Expanded(child: Text(order['total']!)),
-          Expanded(child: Text(order['status']!)),
-          Expanded(child: Text(order['date']!)),
+          Expanded(child: Text(orderId, overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(customer, overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(total, overflow: TextOverflow.ellipsis)),
+          Expanded(
+            child: Text(
+              status,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: _getStatusColor(status),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    if (status == 'Delivered') return Colors.green;
+    if (status == 'Cancelled') return Colors.red;
+    return Colors.blue;
   }
 }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // ✅ IMPORT AUTH
-import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ IMPORT FIRESTORE
-import 'package:jewelery_app/features/orders/widgets/pending_order_card.dart';
-import 'order_details_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'order_details_screen.dart'; // Import the receipt screen
 
 class MyOrdersScreen extends StatefulWidget {
   const MyOrdersScreen({Key? key}) : super(key: key);
@@ -15,11 +14,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _auth = FirebaseAuth.instance;
-
-  // ❌ REMOVED: Static order lists are no longer needed.
-  // final List<Map<String, dynamic>> _pendingOrders = [...];
-  // final List<Map<String, dynamic>> _completedOrders = [...];
-  // final List<Map<String, dynamic>> _cancelledOrders = [];
 
   @override
   void initState() {
@@ -41,7 +35,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Check for logged-in user
     final uid = _auth.currentUser?.uid;
     if (uid == null) {
       return const Center(child: Text("Please log in to view orders."));
@@ -57,10 +50,20 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                // ✅ PASS STATUS STRING TO NEW WIDGET
-                _buildOrdersList('Confirmed (COD)'),
-                _buildOrdersList('Delivered'),
-                _buildOrdersList('Cancelled'),
+                // Tab 1: Active/Pending Orders
+                // We include all 'active' statuses here
+                _buildOrdersList([
+                  'Pending',
+                  'Confirmed',
+                  'Confirmed (COD)',
+                  'Shipped',
+                ]),
+
+                // Tab 2: Completed Orders
+                _buildOrdersList(['Delivered']),
+
+                // Tab 3: Cancelled Orders
+                _buildOrdersList(['Cancelled']),
               ],
             ),
           ),
@@ -102,9 +105,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
 
   Widget _buildTabChip(String text, int index) {
     bool isSelected = _tabController.index == index;
-    // NOTE: We map "Pending" tab UI to "Confirmed (COD)" status in Firestore
-    final statusText = text == 'Pending' ? 'Confirmed (COD)' : text;
-
     return Expanded(
       child: GestureDetector(
         onTap: () {
@@ -132,19 +132,19 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     );
   }
 
-  // ✅ NEW: WIDGET ACCEPTS A STATUS STRING AND RETURNS A STREAMBUILDER
-  Widget _buildOrdersList(String statusFilter) {
+  // ✅ UPDATED: Accepts a LIST of statuses to filter by
+  Widget _buildOrdersList(List<String> statusFilters) {
     final uid = _auth.currentUser?.uid;
-    if (uid == null) {
-      return const Center(child: Text("Authentication error."));
-    }
+    if (uid == null) return const Center(child: Text("Auth Error"));
 
     return StreamBuilder<QuerySnapshot>(
-      // ✅ COMPOUND QUERY: Filter by User ID AND Status
       stream: FirebaseFirestore.instance
           .collection('orders')
           .where('userId', isEqualTo: uid)
-          .where('orderStatus', isEqualTo: statusFilter)
+          // ✅ KEY CHANGE: Use 'whereIn' to match ANY of the statuses in the list
+          .where('orderStatus', whereIn: statusFilters)
+          // Note: You might need to create an Index for this query!
+          // Check your Debug Console if it doesn't load.
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -155,21 +155,35 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
         }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Center(
-            child: Text(
-              'You have no ${statusFilter.toLowerCase()} orders.',
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.shopping_bag_outlined,
+                  size: 60,
+                  color: Colors.grey[300],
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'No orders found.',
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                ),
+              ],
             ),
           );
         }
 
+        // Sort locally if backend sorting conflicts with 'whereIn'
+        final docs = snapshot.data!.docs;
+        // Optional: sort by timestamp descending (newest first)
+        // docs.sort((a, b) => (b['timestamp'] as Timestamp).compareTo(a['timestamp'] as Timestamp));
+
         return ListView.builder(
           padding: const EdgeInsets.all(16.0),
-          itemCount: snapshot.data!.docs.length,
+          itemCount: docs.length,
           itemBuilder: (context, index) {
-            final doc = snapshot.data!.docs[index];
+            final doc = docs[index];
             final orderData = doc.data()! as Map<String, dynamic>;
-
-            // Pass the document ID (doc.id) for details/tracking
             return _buildOrderCard(orderData, doc.id);
           },
         );
@@ -177,25 +191,30 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
     );
   }
 
-  // ✅ UPDATED ORDER CARD WIDGET TO BE DYNAMIC
   Widget _buildOrderCard(Map<String, dynamic> order, String orderDocId) {
-    // Safely extract nested data
-    final String orderIdDisplay =
-        order['id'] ?? orderDocId; // Use docId as fallback
+    final String orderIdDisplay = order['trackingNumber'] ?? orderDocId;
+
+    // Safely handle timestamp
     final Timestamp? timestamp = order['timestamp'] as Timestamp?;
     final String dateDisplay = timestamp != null
-        ? '${timestamp.toDate().day}-${timestamp.toDate().month}-${timestamp.toDate().year}'
+        ? '${timestamp.toDate().day}/${timestamp.toDate().month}/${timestamp.toDate().year}'
         : 'N/A';
 
-    // Get the first item's details for the card preview
-    final firstItem = (order['items'] as List<dynamic>?)?.first;
-    final productName = firstItem?['name'] ?? 'Multiple Items';
-    final price = (firstItem?['price'] as num?)?.toDouble() ?? 0.0;
-    final quantity = (firstItem?['quantity'] as int?) ?? 1;
+    // Safely handle items list
+    final List<dynamic> items = order['items'] as List<dynamic>? ?? [];
+    final firstItem = items.isNotEmpty ? items.first : null;
+
+    final productName = firstItem?['name'] ?? 'Order Items';
     final imageUrl = firstItem?['imageUrl'] ?? '';
-    final statusColor = order['orderStatus'] == 'Delivered'
-        ? Colors.green
-        : Colors.blue;
+    final double totalAmount =
+        (order['totalAmount'] as num?)?.toDouble() ?? 0.0;
+    final String status = order['orderStatus'] ?? 'Pending';
+
+    // Status Color Logic
+    Color statusColor = Colors.blue;
+    if (status == 'Delivered') statusColor = Colors.green;
+    if (status == 'Cancelled') statusColor = Colors.red;
+    if (status.contains('Confirmed')) statusColor = Colors.orange;
 
     return Card(
       elevation: 2,
@@ -232,17 +251,25 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    imageUrl,
-                    width: 70,
-                    height: 70,
-                    fit: BoxFit.cover,
-                    errorBuilder: (c, e, s) => Container(
-                      width: 70,
-                      height: 70,
-                      color: Colors.grey[200],
-                    ),
-                  ),
+                  child: imageUrl.isNotEmpty
+                      ? Image.network(
+                          imageUrl,
+                          width: 70,
+                          height: 70,
+                          fit: BoxFit.cover,
+                          errorBuilder: (c, e, s) => Container(
+                            width: 70,
+                            height: 70,
+                            color: Colors.grey[200],
+                            child: const Icon(Icons.broken_image),
+                          ),
+                        )
+                      : Container(
+                          width: 70,
+                          height: 70,
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.image_not_supported),
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -259,16 +286,17 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        'Quantity: $quantity',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 14,
+                      if (items.length > 1)
+                        Text(
+                          '+ ${items.length - 1} more items',
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 8),
                       Text(
-                        '₹${(price * quantity).toStringAsFixed(2)}',
+                        '₹${totalAmount.toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -284,31 +312,27 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      order['orderStatus'],
-                      style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                      textAlign: TextAlign.center,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
                 OutlinedButton(
-                  // NOTE: This assumes OrderDetailsScreen can display any order status
                   onPressed: () {
+                    // Pass the full order map to the receipt screen
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -323,7 +347,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen>
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text('View Details'),
+                  child: const Text('View Receipt'),
                 ),
               ],
             ),

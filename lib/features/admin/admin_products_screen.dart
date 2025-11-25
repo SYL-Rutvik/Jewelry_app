@@ -5,6 +5,7 @@ import 'add_product_screen.dart';
 class AdminProductsScreen extends StatelessWidget {
   const AdminProductsScreen({Key? key}) : super(key: key);
 
+  // Function to show confirmation dialog and delete the product
   void _confirmAndDeleteProduct(BuildContext context, String docId) {
     showDialog(
       context: context,
@@ -21,8 +22,9 @@ class AdminProductsScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () async {
-                Navigator.of(ctx).pop();
+                Navigator.of(ctx).pop(); // Close the dialog
                 try {
+                  // Delete the document from Firestore
                   await FirebaseFirestore.instance
                       .collection('products')
                       .doc(docId)
@@ -69,6 +71,7 @@ class AdminProductsScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          // Navigate to AddProductScreen for ADD mode
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const AddProductScreen()),
@@ -78,6 +81,7 @@ class AdminProductsScreen extends StatelessWidget {
         child: const Icon(Icons.add, color: Colors.white),
       ),
       body: SingleChildScrollView(
+        // Outer Vertical ScrollView
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -93,6 +97,7 @@ class AdminProductsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
+              // ✅ HORIZONTAL SCROLLVIEW (Fixes Overflow)
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Container(
@@ -100,6 +105,7 @@ class AdminProductsScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(8),
+                    // ✅ FIXED: Changed BoxConstraints to BoxShadow
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
@@ -111,14 +117,18 @@ class AdminProductsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Header Row (uses fixed widths)
                       _buildHeaderRow(),
                       const Divider(height: 1, color: Colors.black12),
 
+                      // Data Stream
                       StreamBuilder<QuerySnapshot>(
                         stream: FirebaseFirestore.instance
                             .collection('products')
                             .snapshots(),
                         builder: (context, snapshot) {
+                          if (snapshot.hasError)
+                            return const Text('Error loading products');
                           if (snapshot.connectionState ==
                               ConnectionState.waiting)
                             return const Center(
@@ -140,6 +150,7 @@ class AdminProductsScreen extends StatelessWidget {
                             ) {
                               Map<String, dynamic> product =
                                   document.data()! as Map<String, dynamic>;
+                              // Pass the document ID to the row builder
                               return _buildProductRow(
                                 product,
                                 document.id,
@@ -161,6 +172,8 @@ class AdminProductsScreen extends StatelessWidget {
     );
   }
 
+  // --- HELPER METHODS ---
+
   Widget _buildHeaderRow() {
     const style = TextStyle(
       fontWeight: FontWeight.bold,
@@ -171,11 +184,10 @@ class AdminProductsScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12.0),
       child: Row(
         children: [
-          const SizedBox(width: 60, child: Text('Image', style: style)),
-          const SizedBox(width: 150, child: Text('Product Name', style: style)),
-          const SizedBox(width: 50, child: Text('Price', style: style)),
-          const SizedBox(width: 50, child: Text('Stock', style: style)),
-          const SizedBox(width: 70, child: Text('Category', style: style)),
+          const SizedBox(width: 80, child: Text('Image', style: style)),
+          const SizedBox(width: 200, child: Text('Product Name', style: style)),
+          const SizedBox(width: 100, child: Text('Price', style: style)),
+          const SizedBox(width: 90, child: Text('Category', style: style)),
           const SizedBox(
             width: 120,
             child: Text('Actions', style: style, textAlign: TextAlign.center),
@@ -196,8 +208,9 @@ class AdminProductsScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // 1. Image
           SizedBox(
-            width: 60,
+            width: 80,
             child: (product['imageUrl'] != null)
                 ? Image.network(
                     product['imageUrl'],
@@ -207,8 +220,9 @@ class AdminProductsScreen extends StatelessWidget {
                   )
                 : Container(height: 40, width: 40, color: Colors.grey[200]),
           ),
+          // 2. Product Name
           SizedBox(
-            width: 150,
+            width: 200,
             child: Text(
               product['name'] ?? 'N/A',
               overflow: TextOverflow.ellipsis,
@@ -216,33 +230,30 @@ class AdminProductsScreen extends StatelessWidget {
               style: const TextStyle(fontSize: 12),
             ),
           ),
+          // 3. Price
           SizedBox(
-            width: 50,
+            width: 100,
             child: Text(
               '₹${product['price']?.toStringAsFixed(0) ?? '0'}',
               style: const TextStyle(fontSize: 12),
             ),
           ),
+          // 4. Category
           SizedBox(
-            width: 50,
-            child: Text(
-              product['stockQuantity']?.toString() ?? '0',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-          ),
-          SizedBox(
-            width: 70,
+            width: 90,
             child: Text(
               product['category'] ?? 'N/A',
               style: const TextStyle(fontSize: 12),
             ),
           ),
 
+          // 5. Actions
           SizedBox(
             width: 120,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
+                // EDIT BUTTON
                 _buildActionButton(
                   text: 'Edit',
                   color: Colors.blue,
@@ -258,6 +269,7 @@ class AdminProductsScreen extends StatelessWidget {
                     );
                   },
                 ),
+                // DELETE BUTTON
                 _buildActionButton(
                   text: 'Delete',
                   color: Colors.red,
